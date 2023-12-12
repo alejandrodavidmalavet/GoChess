@@ -27,24 +27,35 @@ type Piece struct {
 	HasMoved bool
 }
 
-type State struct {
-	Board           [120]*Piece
-	CurrColor       Color
-	Score           float64
-	EnPassantSquare int
+type GameState struct {
+	Board              [120]*Piece
+	CurrColor          Color
+	Score              float64
+	EnPassantSquare    int
+	BlackTargetSquares map[int]struct{}
+	WhiteTargetSquares map[int]struct{}
 
-	// Prev  *State not sure if we need this
+	Prev *GameState // not sure if we need this
 }
 
 // getMovesPreCheck returns a list of valid moves for the piece at the given square
 // THIS DOES NOT HANDLE CHECK
-func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct{} {
+func (gs *GameState) getMovesPreCheck(square int, withCastle bool) map[int]struct{} {
 	// You cannot move a piece that doesn't exist
-	if state.Board[square] == nil {
+	if gs.Board[square] == nil {
 		return nil
 	}
 
-	currPiece := state.Board[square]
+	currPiece := gs.Board[square]
+
+	// determine which squares are under attack
+	var dangerousSquares map[int]struct{}
+	switch currPiece.Color {
+	case White:
+		dangerousSquares = gs.BlackTargetSquares
+	case Black:
+		dangerousSquares = gs.WhiteTargetSquares
+	}
 
 	validMoves := make(map[int]struct{})
 
@@ -64,7 +75,7 @@ func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct
 				}
 
 				// 2. Ensure the move does not capture a friendly piece
-				if state.Board[target] != nil && state.Board[target].Color == currPiece.Color {
+				if gs.Board[target] != nil && gs.Board[target].Color == currPiece.Color {
 					// 2.1 If the piece is a knight continue to process moves
 					if currPiece.Type == Knight {
 						continue
@@ -72,7 +83,7 @@ func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct
 					break
 				}
 
-				// 3. Handle king and pawn special cases
+				// 3. Handle special pawn movement & en passant
 				if currPiece.Type == Pawn {
 
 					// 0. Ensure that a pawn does not move backwards
@@ -88,45 +99,64 @@ func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct
 					}
 
 					// 2. Ensure that a pawn does not move verically onto or through another piece
-					if offset%12 == 0 && state.Board[target] != nil {
+					if offset%12 == 0 && gs.Board[target] != nil {
 						break
 					}
 
 					// 3. Ensure that a pawn does not move diagonally onto an empty square / non-en-passant square
-					if offset%12 != 0 && state.Board[target] == nil && target != state.EnPassantSquare {
+					if offset%12 != 0 && gs.Board[target] == nil && target != gs.EnPassantSquare {
 						continue
 					}
-				} else if currPiece.Type == King && offset == 2 && withCastle {
+				}
+
+				// 4. Handle castling
+				if currPiece.Type == King && offset == 2 && withCastle {
 
 					// 1. Ensure the king has not moved
 					if currPiece.HasMoved {
 						continue
 					}
 
-					// 2. Ensure that there are no pieces between the king and rook
-					// 3. Ensure that the rook has not moved TODO
+					// 2. Ensure the king is not currently in check
+					if _, inCheck := dangerousSquares[square]; inCheck {
+						continue
+					}
+
+					var rook *Piece
+
+					// 3. Ensure that there are no pieces between the king and rook
 					switch target {
 					case 104: // white king side
-						if state.Board[103] != nil || state.Board[104] != nil {
+						rook = gs.Board[105]
+						if gs.Board[103] != nil || gs.Board[104] != nil {
 							continue
 						}
 					case 100: // white queen side
-						if state.Board[99] != nil || state.Board[100] != nil || state.Board[101] != nil {
+						rook = gs.Board[98]
+						if gs.Board[99] != nil || gs.Board[100] != nil || gs.Board[101] != nil {
 							continue
 						}
-					case 19: // black king side
-						if state.Board[19] != nil || state.Board[20] != nil {
+					case 20: // black king side
+						rook = gs.Board[21]
+						if gs.Board[19] != nil || gs.Board[20] != nil {
 							continue
 						}
 					case 16: // black queen side
-						if state.Board[15] != nil || state.Board[16] != nil || state.Board[17] != nil {
+						rook = gs.Board[14]
+						if gs.Board[15] != nil || gs.Board[16] != nil || gs.Board[17] != nil {
 							continue
 						}
 					}
 
-					// 3. Ensure that the king is not in check
-					if state.isUnderAttack(square, !currPiece.Color) {
+					// 4. Ensure that the rook has not moved
+					if rook == nil || rook.HasMoved {
 						continue
+					}
+
+					// 4. Ensure the king does not move into or through check
+					switch target {
+					case 104:
+
 					}
 
 					// todo: handle castling
@@ -140,23 +170,22 @@ func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct
 				validMoves[target] = struct{}{}
 
 				// if the move vector is blocked, we should break
-				if state.Board[target] != nil && currPiece.Type != Knight {
+				if gs.Board[target] != nil && currPiece.Type != Knight {
 					break
 				}
 			}
-
 		}
 	}
 
 	return validMoves
 }
 
-func (state *State) isUnderAttack(square int, by Color) bool {
-	for i, piece := range state.Board {
+func (gs *GameState) isUnderAttack(square int, by Color) bool {
+	for i, piece := range gs.Board {
 		if piece.Color != by {
 			continue
 		}
-		validMoves := state.getMovesPreCheck(i, false)
+		validMoves := gs.getMovesPreCheck(i, false)
 		if _, ok := validMoves[square]; ok {
 			return true
 		}
