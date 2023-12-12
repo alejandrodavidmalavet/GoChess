@@ -1,10 +1,12 @@
 package game
 
-type Player bool
+import "math"
+
+type Color bool
 
 const (
-	White Player = true
-	Black Player = false
+	White Color = true
+	Black Color = false
 )
 
 type Type int
@@ -20,23 +22,23 @@ const (
 
 type Piece struct {
 	Type     Type
-	Player   Player
-	Value    int
+	Color    Color
+	Value    float64
 	HasMoved bool
 }
 
 type State struct {
 	Board           [120]*Piece
-	CurrPlayer      Player
+	CurrColor       Color
 	Score           float64
 	EnPassantSquare int
 
 	// Prev  *State not sure if we need this
 }
 
-// validMoves returns a list of valid moves for the piece at the given square
+// getMovesPreCheck returns a list of valid moves for the piece at the given square
 // THIS DOES NOT HANDLE CHECK
-func (state *State) validMoves(square int) []int {
+func (state *State) getMovesPreCheck(square int, withCastle bool) map[int]struct{} {
 	// You cannot move a piece that doesn't exist
 	if state.Board[square] == nil {
 		return nil
@@ -44,12 +46,7 @@ func (state *State) validMoves(square int) []int {
 
 	currPiece := state.Board[square]
 
-	// You cannot move a piece that isn't yours
-	if currPiece.Player != state.CurrPlayer {
-		return nil
-	}
-
-	validMoves := make([]int, 0)
+	validMoves := make(map[int]struct{})
 
 	// Handle the movement vectors
 	for _, vector := range moveVectors[currPiece.Type] {
@@ -66,8 +63,8 @@ func (state *State) validMoves(square int) []int {
 					break
 				}
 
-				// 2. Ensure the move does not result in a capture of your own piece
-				if state.Board[target] != nil && state.Board[target].Player == state.CurrPlayer {
+				// 2. Ensure the move does not capture a friendly piece
+				if state.Board[target] != nil && state.Board[target].Color == currPiece.Color {
 					// 2.1 If the piece is a knight continue to process moves
 					if currPiece.Type == Knight {
 						continue
@@ -79,9 +76,9 @@ func (state *State) validMoves(square int) []int {
 				if currPiece.Type == Pawn {
 
 					// 0. Ensure that a pawn does not move backwards
-					if currPiece.Player == White && sign == 1 {
+					if currPiece.Color == White && sign != -1 {
 						break
-					} else if currPiece.Player == Black && sign == -1 {
+					} else if currPiece.Color == Black && sign != 1 {
 						break
 					}
 
@@ -99,15 +96,48 @@ func (state *State) validMoves(square int) []int {
 					if offset%12 != 0 && state.Board[target] == nil && target != state.EnPassantSquare {
 						continue
 					}
-				} else if currPiece.Type == King {
+				} else if currPiece.Type == King && offset == 2 && withCastle {
+
+					// 1. Ensure the king has not moved
+					if currPiece.HasMoved {
+						continue
+					}
+
+					// 2. Ensure that there are no pieces between the king and rook
+					// 3. Ensure that the rook has not moved TODO
+					switch target {
+					case 104: // white king side
+						if state.Board[103] != nil || state.Board[104] != nil {
+							continue
+						}
+					case 100: // white queen side
+						if state.Board[99] != nil || state.Board[100] != nil || state.Board[101] != nil {
+							continue
+						}
+					case 19: // black king side
+						if state.Board[19] != nil || state.Board[20] != nil {
+							continue
+						}
+					case 16: // black queen side
+						if state.Board[15] != nil || state.Board[16] != nil || state.Board[17] != nil {
+							continue
+						}
+					}
+
+					// 3. Ensure that the king is not in check
+					if state.isUnderAttack(square, !currPiece.Color) {
+						continue
+					}
+
 					// todo: handle castling
 					// 1. Ensure that there are no pieces between the king and rook
 					// 2. Ensure that neither the king nor the rook have moved
-					// 3. Ensure that the king is not in check
+
 					// 4. Ensure that a king does not move into OR through check
+
 				}
 
-				validMoves = append(validMoves, target)
+				validMoves[target] = struct{}{}
 
 				// if the move vector is blocked, we should break
 				if state.Board[target] != nil && currPiece.Type != Knight {
@@ -118,17 +148,50 @@ func (state *State) validMoves(square int) []int {
 		}
 	}
 
-	return nil
+	return validMoves
 }
 
-func isValid(target Piece, player Player) bool {
+func (state *State) isUnderAttack(square int, by Color) bool {
+	for i, piece := range state.Board {
+		if piece.Color != by {
+			continue
+		}
+		validMoves := state.getMovesPreCheck(i, false)
+		if _, ok := validMoves[square]; ok {
+			return true
+		}
+	}
 	return false
 }
 
-func (state *State) isUnderAttack(square int) bool {
-
-	return false
+func newBoard() [120]*Piece {
+	return [120]*Piece{
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+		__(), __(), BR(), Bk(), BB(), BQ(), BK(), BB(), Bk(), BR(), __(), __(),
+		__(), __(), BP(), BP(), BP(), BP(), BP(), BP(), BP(), BP(), __(), __(),
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+		__(), __(), WP(), WP(), WP(), WP(), WP(), WP(), WP(), WP(), __(), __(),
+		__(), __(), WR(), Wk(), WB(), WQ(), WK(), WB(), Wk(), WR(), __(), __(),
+		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
+	}
 }
+
+func BR() *Piece { return &Piece{Type: Rook, Color: Black, Value: 5} }
+func WR() *Piece { return &Piece{Type: Rook, Color: White, Value: 5} }
+func BK() *Piece { return &Piece{Type: King, Color: Black, Value: math.Inf(1)} }
+func WK() *Piece { return &Piece{Type: King, Color: White, Value: math.Inf(1)} }
+func BQ() *Piece { return &Piece{Type: Queen, Color: Black, Value: 9} }
+func WQ() *Piece { return &Piece{Type: Queen, Color: White, Value: 9} }
+func BB() *Piece { return &Piece{Type: Bishop, Color: Black, Value: 3} }
+func WB() *Piece { return &Piece{Type: Bishop, Color: White, Value: 3} }
+func Bk() *Piece { return &Piece{Type: Knight, Color: Black, Value: 3} }
+func Wk() *Piece { return &Piece{Type: Knight, Color: White, Value: 3} }
+func BP() *Piece { return &Piece{Type: Pawn, Color: Black, Value: 1} }
+func WP() *Piece { return &Piece{Type: Pawn, Color: White, Value: 1} }
+func __() *Piece { return nil }
 
 // generic valid moves for each piece, unsigned
 
