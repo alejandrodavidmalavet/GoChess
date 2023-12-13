@@ -171,7 +171,7 @@ func (gs *GameState) getMovesPreCheck(square int8) map[int8]MoveType {
 						validMoves[target] = Aggressive
 						// 2.3 or the square is the en passant square & the pawn belongs to the current player
 					} else if target == gs.enPassantSquare && gs.currColor == currPiece.Color {
-						validMoves[target] = EnPassantTrigger
+						validMoves[target] = EnPassantAttack
 					}
 					continue
 				}
@@ -219,13 +219,9 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 		gs.board[14] = nil
 		gs.board[17].HasMoved = true
 	case EnPassantAttack:
-		if gs.currColor == White {
-			gs.board[destination+12] = nil
-		} else {
-			gs.board[destination-12] = nil
-		}
+		gs.board[destination+12*int8(gs.currColor)] = nil
 	case EnPassantTrigger:
-		gs.enPassantSquare = (destination + origin) / 2
+		gs.enPassantSquare = destination + 12*int8(gs.currColor)
 	}
 
 	// update the current player
