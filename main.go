@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"github.com/alejandrodavidmalavet/GoChess/internal/game"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	game.RandomGame()
 }
