@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
+	"math/rand"
 )
 
 type Color int8
@@ -12,23 +13,26 @@ const (
 	Black Color = -1
 )
 
-type MoveType int
+type MoveType int8
 
 const (
-	// move types that MUST result in a capture are positive
-	EnPassantAttack MoveType = 2
-	Aggressive      MoveType = 1
-
-	// moves that can may or may not result in a capture are neutral == 0
 	Neutral MoveType = 0
 
-	// move types that will never result in a capture are negative
-	Passive              MoveType = -1
-	EnPassantTrigger     MoveType = -2
-	BlackQueenSideCastle MoveType = -10
-	BlackKingSideCastle  MoveType = -20
-	WhiteQueenSideCastle MoveType = -30
-	WhiteKingSideCastle  MoveType = -40
+	// en passant moves
+	EnPassantAttack  MoveType = 1
+	EnPassantTrigger MoveType = 2
+
+	// castling moves
+	WhiteKingSideCastle  MoveType = 3
+	WhiteQueenSideCastle MoveType = 4
+	BlackKingSideCastle  MoveType = 5
+	BlackQueenSideCastle MoveType = 6
+
+	// promotion moves
+	QueenPromotion  MoveType = 7
+	RookPromotion   MoveType = 8
+	BishopPromotion MoveType = 9
+	KnightPromotion MoveType = 10
 )
 
 type Type int
@@ -54,8 +58,11 @@ type GameState struct {
 	enPassantSquare int8
 	currColor       Color
 
-	blackValidMoves map[int8]map[int8]MoveType
-	whiteValidMoves map[int8]map[int8]MoveType
+	whitePassiveMoves map[int8]map[int8]map[MoveType]struct{}
+	blackPassiveMoves map[int8]map[int8]map[MoveType]struct{}
+
+	whiteAggressiveMoves map[int8]map[int8]map[MoveType]struct{}
+	blackAggressiveMoves map[int8]map[int8]map[MoveType]struct{}
 }
 
 func (gs *GameState) PrettyPrint() {
@@ -115,15 +122,16 @@ func (gs *GameState) PrettyPrint() {
 
 // getMovesPreCheck returns a list of valid moves for the piece at the given square
 // THIS DOES NOT HANDLE CHECK
-func (gs *GameState) getMovesPreCheck(square int8) map[int8]MoveType {
+func (gs *GameState) getMovesPreCheck(square int8) (map[int8]map[MoveType]struct{}, map[int8]map[MoveType]struct{}) {
 	// You cannot move a piece that doesn't exist
 	if gs.board[square] == nil {
-		return nil
+		return nil, nil
 	}
 
 	currPiece := gs.board[square]
 
-	validMoves := make(map[int8]MoveType)
+	attackingMoves := make(map[int8]map[MoveType]struct{})
+	passiveMoves := make(map[int8]map[MoveType]struct{})
 
 	// Handle the movement vectors
 	for _, vector := range moveVectors[currPiece.Type] {
@@ -141,42 +149,60 @@ func (gs *GameState) getMovesPreCheck(square int8) map[int8]MoveType {
 					break
 				}
 
-				// 3. Handle special pawn movement & en passant
+				// 3. Handle pawns
 				if currPiece.Type == Pawn {
 
-					// 0. Ensure that a pawn does not move backwards
+					// a. Ensure that a pawn does not move backwards
 					if int8(currPiece.Color) == direction {
 						break
 					}
 
-					// 1. Ensure that a pawn does not move two squares if it has already moved
-					if currPiece.HasMoved && offset == 24 {
-						continue
+					// b. Ensure the pawn does not move forward if the square is occupied
+					if offset%12 == 0 && gs.board[target] != nil {
+						break
 					}
 
-					// 2. Handle forward movement
-					if offset%12 == 0 {
-						// 2.1 Ensure that a pawn does not move verically onto or through another piece
-						if gs.board[target] != nil {
-							break
+					// c. The pawn moves forward one square
+					if offset == 12 {
+
+						// handle promotions
+						if _, ok := promotionSquares[target]; ok {
+							passiveMoves[target] = map[MoveType]struct{}{
+								QueenPromotion:  {},
+								RookPromotion:   {},
+								BishopPromotion: {},
+								KnightPromotion: {},
+							}
+						} else {
+							passiveMoves[target] = map[MoveType]struct{}{Neutral: {}}
 						}
 
-						if offset == 12 {
-							validMoves[target] = Passive
-						} else if offset == 24 {
-							validMoves[target] = EnPassantTrigger
-						}
-						// 2.2 Only allow diagonal movement if there is a piece to capture
+						// d. The pawn moves forward two squares
+					} else if offset == 24 && !currPiece.HasMoved {
+						passiveMoves[target] = map[MoveType]struct{}{EnPassantTrigger: {}}
+
+						// e. The pawn captures diagonally
 					} else if gs.board[target] != nil {
-						validMoves[target] = Aggressive
-						// 2.3 or the square is the en passant square & the pawn belongs to the current player
-					} else if target == gs.enPassantSquare && gs.currColor == currPiece.Color {
-						validMoves[target] = EnPassantAttack
-					}
-					continue
-				}
 
-				validMoves[target] = Neutral
+						// handle promotions
+						if _, ok := promotionSquares[target]; ok {
+							attackingMoves[target] = map[MoveType]struct{}{
+								QueenPromotion:  {},
+								RookPromotion:   {},
+								BishopPromotion: {},
+								KnightPromotion: {},
+							}
+						} else {
+							attackingMoves[target] = map[MoveType]struct{}{Neutral: {}}
+						}
+
+						// f. The pawn captures en passant
+					} else if target == gs.enPassantSquare && gs.currColor == currPiece.Color { // en passant capture
+						passiveMoves[target] = map[MoveType]struct{}{EnPassantAttack: {}}
+					}
+				} else {
+					attackingMoves[target] = map[MoveType]struct{}{Neutral: {}}
+				}
 
 				// if the move vector is blocked, we should break
 				if gs.board[target] != nil {
@@ -186,11 +212,15 @@ func (gs *GameState) getMovesPreCheck(square int8) map[int8]MoveType {
 		}
 	}
 
-	return validMoves
+	return passiveMoves, attackingMoves
 }
 
 // executeMove executes a move on the board, it does NOT validate the move
-func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
+func (gs *GameState) executeMove(move *Move) {
+
+	origin := move.from
+	destination := move.to
+	moveType := move.mt
 
 	// handle a typical move
 	gs.board[destination] = gs.board[origin]
@@ -200,8 +230,9 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 	// reset the en passant square
 	gs.enPassantSquare = 0
 
-	// hamdle special moves
+	// handle special moves
 	switch moveType {
+	// castling
 	case WhiteKingSideCastle:
 		gs.board[103] = gs.board[105]
 		gs.board[105] = nil
@@ -218,10 +249,22 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 		gs.board[17] = gs.board[14]
 		gs.board[14] = nil
 		gs.board[17].HasMoved = true
+
+	// en passant
 	case EnPassantAttack:
 		gs.board[destination+12*int8(gs.currColor)] = nil
 	case EnPassantTrigger:
 		gs.enPassantSquare = destination + 12*int8(gs.currColor)
+
+	// promotions
+	case QueenPromotion:
+		gs.board[destination] = &Piece{Type: Queen, Color: gs.currColor, Value: 9, HasMoved: true}
+	case RookPromotion:
+		gs.board[destination] = &Piece{Type: Rook, Color: gs.currColor, Value: 5, HasMoved: true}
+	case BishopPromotion:
+		gs.board[destination] = &Piece{Type: Bishop, Color: gs.currColor, Value: 3, HasMoved: true}
+	case KnightPromotion:
+		gs.board[destination] = &Piece{Type: Knight, Color: gs.currColor, Value: 3, HasMoved: true}
 	}
 
 	// update the current player
@@ -243,40 +286,46 @@ func NewGame() *GameState {
 
 func (gs *GameState) Update() {
 
-	gs.blackValidMoves = make(map[int8]map[int8]MoveType)
-	gs.whiteValidMoves = make(map[int8]map[int8]MoveType)
+	gs.whitePassiveMoves = make(map[int8]map[int8]map[MoveType]struct{})
+	gs.blackPassiveMoves = make(map[int8]map[int8]map[MoveType]struct{})
+	gs.whiteAggressiveMoves = make(map[int8]map[int8]map[MoveType]struct{})
+	gs.blackAggressiveMoves = make(map[int8]map[int8]map[MoveType]struct{})
 
 	for i, piece := range gs.board {
 		if piece == nil {
 			continue
 		}
 
+		passive, aggressive := gs.getMovesPreCheck(int8(i))
+
 		switch piece.Color {
 		case White:
-			gs.whiteValidMoves[int8(i)] = gs.getMovesPreCheck(int8(i))
+			gs.whitePassiveMoves[int8(i)] = passive
+			gs.whiteAggressiveMoves[int8(i)] = aggressive
 		case Black:
-			gs.blackValidMoves[int8(i)] = gs.getMovesPreCheck(int8(i))
+			gs.blackPassiveMoves[int8(i)] = passive
+			gs.blackAggressiveMoves[int8(i)] = aggressive
 		}
 	}
 
 	// check if white can castle on king side
 	if gs.whiteKingSide() {
-		gs.whiteValidMoves[102][104] = WhiteKingSideCastle
+		gs.whitePassiveMoves[102][104] = map[MoveType]struct{}{WhiteKingSideCastle: {}}
 	}
 
 	// check if white can castle on queen side
 	if gs.whiteQueenSide() {
-		gs.whiteValidMoves[102][100] = WhiteQueenSideCastle
+		gs.whitePassiveMoves[102][100] = map[MoveType]struct{}{WhiteQueenSideCastle: {}}
 	}
 
 	// check if black can castle on king side
 	if gs.blackKingSide() {
-		gs.blackValidMoves[18][20] = BlackKingSideCastle
+		gs.blackPassiveMoves[18][20] = map[MoveType]struct{}{BlackKingSideCastle: {}}
 	}
 
 	// check if black can castle on queen side
 	if gs.blackQueenSide() {
-		gs.blackValidMoves[18][16] = BlackQueenSideCastle
+		gs.blackPassiveMoves[18][16] = map[MoveType]struct{}{BlackQueenSideCastle: {}}
 	}
 
 	gs.PrettyPrint()
@@ -288,32 +337,52 @@ func (gs *GameState) Update() {
 func RandomGame() {
 	gs := NewGame()
 	for i := 0; i < 100; i++ {
+		moves := gs.getAllValidMoves()
+		gs.executeMove(moves[rand.Intn(len(moves))])
+	}
+	fmt.Println("Game Over")
+}
 
-		if gs.currColor == White {
-			for start, ends := range gs.whiteValidMoves {
-				if len(ends) == 0 {
-					continue
+type Move struct {
+	from int8
+	to   int8
+	mt   MoveType
+}
+
+func (gs *GameState) getAllValidMoves() []*Move {
+	var moves []*Move
+	if gs.currColor == White {
+		for start, ends := range gs.whitePassiveMoves {
+			for end, mt := range ends {
+				for mt := range mt {
+					moves = append(moves, &Move{to: end, from: start, mt: mt})
 				}
-				for end, mt := range ends {
-					gs.executeMove(start, end, mt)
-					break
-				}
-				break
 			}
-		} else {
-			for start, ends := range gs.blackValidMoves {
-				if len(ends) == 0 {
-					continue
+		}
+		for start, ends := range gs.whiteAggressiveMoves {
+			for end, mt := range ends {
+				for mt := range mt {
+					moves = append(moves, &Move{to: end, from: start, mt: mt})
 				}
-				for end, mt := range ends {
-					gs.executeMove(start, end, mt)
-					break
+			}
+		}
+	} else {
+		for start, ends := range gs.blackPassiveMoves {
+			for end, mt := range ends {
+				for mt := range mt {
+					moves = append(moves, &Move{to: end, from: start, mt: mt})
 				}
-				break
+			}
+		}
+		for start, ends := range gs.blackAggressiveMoves {
+			for end, mt := range ends {
+				for mt := range mt {
+					moves = append(moves, &Move{to: end, from: start, mt: mt})
+				}
 			}
 		}
 	}
-	fmt.Println("Game Over")
+	return moves
 }
 
 func newBoard() [120]*Piece {
@@ -389,5 +458,10 @@ var validSquares = map[int8]struct{}{
 	62: {}, 63: {}, 64: {}, 65: {}, 66: {}, 67: {}, 68: {}, 69: {},
 	74: {}, 75: {}, 76: {}, 77: {}, 78: {}, 79: {}, 80: {}, 81: {},
 	86: {}, 87: {}, 88: {}, 89: {}, 90: {}, 91: {}, 92: {}, 93: {},
+	98: {}, 99: {}, 100: {}, 101: {}, 102: {}, 103: {}, 104: {}, 105: {},
+}
+
+var promotionSquares = map[int8]struct{}{
+	14: {}, 15: {}, 16: {}, 17: {}, 18: {}, 19: {}, 20: {}, 21: {},
 	98: {}, 99: {}, 100: {}, 101: {}, 102: {}, 103: {}, 104: {}, 105: {},
 }
