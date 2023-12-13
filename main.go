@@ -5,5 +5,7 @@ import (
 )
 
 func main() {
-	game.RandomGame()
+	for {
+		game.RandomGame()
+	}
 }

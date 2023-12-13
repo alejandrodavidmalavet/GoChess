@@ -15,6 +15,11 @@ const (
 type MoveType int
 
 const (
+	BlackQueenSideCastle MoveType = 10
+	BlackKingSideCastle  MoveType = 20
+	WhiteQueenSideCastle MoveType = 30
+	WhiteKingSideCastle  MoveType = 40
+
 	Aggressive MoveType = 1
 	Neutral    MoveType = 0
 	Passive    MoveType = -1
@@ -46,6 +51,61 @@ type GameState struct {
 
 	blackValidMoves map[int]map[int]MoveType
 	whiteValidMoves map[int]map[int]MoveType
+}
+
+func (gs *GameState) PrettyPrint() {
+	for i, piece := range gs.board {
+		if i%12 == 0 {
+			fmt.Println()
+		}
+		if piece == nil {
+			if _, ok := validSquares[i]; ok {
+				fmt.Print(" - ")
+			} else {
+				fmt.Print("   ")
+			}
+			continue
+		}
+
+		switch piece.Type {
+		case King:
+			if piece.Color == White {
+				fmt.Print(" ♚ ")
+			} else {
+				fmt.Print(" ♔ ")
+			}
+		case Queen:
+			if piece.Color == White {
+				fmt.Print(" ♛ ")
+			} else {
+				fmt.Print(" ♕ ")
+			}
+		case Rook:
+			if piece.Color == White {
+				fmt.Print(" ♜ ")
+			} else {
+				fmt.Print(" ♖ ")
+			}
+		case Bishop:
+			if piece.Color == White {
+				fmt.Print(" ♝ ")
+			} else {
+				fmt.Print(" ♗ ")
+			}
+		case Knight:
+			if piece.Color == White {
+				fmt.Print(" ♞ ")
+			} else {
+				fmt.Print(" ♘ ")
+			}
+		case Pawn:
+			if piece.Color == White {
+				fmt.Print(" ♟ ")
+			} else {
+				fmt.Print(" ♙ ")
+			}
+		}
+	}
 }
 
 // getMovesPreCheck returns a list of valid moves for the piece at the given square
@@ -129,6 +189,80 @@ func (gs *GameState) getMovesPreCheck(square int) map[int]MoveType {
 	return validMoves
 }
 
+func (gs *GameState) executeMove(origin, destination int, moveType MoveType) {
+	defer func() {
+		gs.Update()
+	}()
+
+	// handle castling
+	if moveType == WhiteKingSideCastle {
+		// move king
+		gs.board[104] = gs.board[102]
+		gs.board[102] = nil
+		gs.board[104].HasMoved = true
+
+		// move rook
+		gs.board[103] = gs.board[105]
+		gs.board[105] = nil
+		gs.board[103].HasMoved = true
+		return
+	} else if moveType == WhiteQueenSideCastle {
+		// move king
+		gs.board[100] = gs.board[102]
+		gs.board[102] = nil
+		gs.board[100].HasMoved = true
+
+		// move rook
+		gs.board[101] = gs.board[98]
+		gs.board[98] = nil
+		gs.board[101].HasMoved = true
+		return
+	} else if moveType == BlackKingSideCastle {
+		// move king
+		gs.board[20] = gs.board[18]
+		gs.board[18] = nil
+		gs.board[20].HasMoved = true
+
+		// move rook
+		gs.board[19] = gs.board[21]
+		gs.board[21] = nil
+		gs.board[19].HasMoved = true
+		return
+	} else if moveType == BlackQueenSideCastle {
+		// move king
+		gs.board[16] = gs.board[18]
+		gs.board[18] = nil
+		gs.board[16].HasMoved = true
+
+		// move rook
+		gs.board[17] = gs.board[14]
+		gs.board[14] = nil
+		gs.board[17].HasMoved = true
+		return
+	}
+
+	// handle a generic move
+	gs.board[destination] = gs.board[origin]
+	gs.board[origin] = nil
+	gs.board[destination].HasMoved = true
+
+	// handle en passant attack
+	if moveType == EnPassant {
+		if gs.currColor == White {
+			gs.board[destination+12] = nil
+		} else {
+			gs.board[destination-12] = nil
+		}
+	}
+
+	// handle engaging a new en passant square
+	if gs.board[destination].Type == Pawn && math.Abs(float64(destination-origin)) == 24 {
+		gs.enPassantSquare = (destination + origin) / 2
+	} else {
+		gs.enPassantSquare = 0
+	}
+}
+
 func NewGame() *GameState {
 	gs := &GameState{
 		board: newBoard(),
@@ -163,9 +297,33 @@ func (gs *GameState) Update() {
 			gs.blackValidMoves[i] = gs.getMovesPreCheck(i)
 		}
 	}
+
+	// check if white can castle on king side
+	if gs.whiteKingSide() {
+		gs.whiteValidMoves[102][104] = WhiteKingSideCastle
+	}
+
+	// check if white can castle on queen side
+	if gs.whiteQueenSide() {
+		gs.whiteValidMoves[102][100] = WhiteQueenSideCastle
+	}
+
+	// check if black can castle on king side
+	if gs.blackKingSide() {
+		gs.blackValidMoves[18][20] = BlackKingSideCastle
+	}
+
+	// check if black can castle on queen side
+	if gs.blackQueenSide() {
+		gs.blackValidMoves[18][16] = BlackQueenSideCastle
+	}
+
+	gs.PrettyPrint()
+	return
+
 }
 
-// scrappy random game generator for naieve testing
+// scrappy random game generator for naive testing
 func RandomGame() {
 	gs := NewGame()
 	for i := 0; i < 100; i++ {
@@ -175,11 +333,8 @@ func RandomGame() {
 				if len(ends) == 0 {
 					continue
 				}
-				for end := range ends {
-					gs.board[end] = gs.board[start]
-					gs.board[start] = nil
-					gs.board[end].HasMoved = true
-					fmt.Println(start, end)
+				for end, mt := range ends {
+					gs.executeMove(start, end, mt)
 					break
 				}
 				break
@@ -189,18 +344,13 @@ func RandomGame() {
 				if len(ends) == 0 {
 					continue
 				}
-				for end := range ends {
-					gs.board[end] = gs.board[start]
-					gs.board[start] = nil
-					gs.board[end].HasMoved = true
-					fmt.Println(start, end)
+				for end, mt := range ends {
+					gs.executeMove(start, end, mt)
 					break
 				}
 				break
 			}
 		}
-
-		gs.Update()
 	}
 	fmt.Println("Game Over")
 }

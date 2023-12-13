@@ -11,21 +11,13 @@ func (gs *GameState) whiteQueenSide() bool {
 		return false
 	}
 
-	// 3. validate the squares between the king and rook
+	// 3. validate the squares between the king and rook are empty
 	if gs.board[101] != nil || gs.board[100] != nil || gs.board[99] != nil {
 		return false
 	}
 
 	// 4. validate that the king will not move through or into check
-	if _, isDangerous := gs.blackValidMoves[100]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.blackValidMoves[101]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.blackValidMoves[102]; isDangerous {
-		return false
-	}
+	// todo
 
 	return true
 }
@@ -41,21 +33,13 @@ func (gs *GameState) whiteKingSide() bool {
 		return false
 	}
 
-	// 3. validate the squares between the king and rook
+	// 3. validate the squares between the king and rook are empty
 	if gs.board[103] != nil || gs.board[104] != nil {
 		return false
 	}
 
 	// 4. validate that the king will not move through or into check
-	if _, isDangerous := gs.blackValidMoves[102]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.blackValidMoves[103]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.blackValidMoves[104]; isDangerous {
-		return false
-	}
+	// todo
 
 	return true
 }
@@ -71,21 +55,14 @@ func (gs *GameState) blackQueenSide() bool {
 		return false
 	}
 
-	// 3. validate the squares between the king and rook
+	// 3. validate the squares between the king and rook are empty
 	if gs.board[15] != nil || gs.board[16] != nil || gs.board[17] != nil {
 		return false
 	}
 
 	// 4. validate that the king will not move through or into check
-	if _, isDangerous := gs.whiteValidMoves[16]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.whiteValidMoves[17]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.whiteValidMoves[18]; isDangerous {
-		return false
-	}
+	// todo
+
 	return true
 }
 
@@ -100,21 +77,13 @@ func (gs *GameState) blackKingSide() bool {
 		return false
 	}
 
-	// 3. validate the squares between the king and rook
+	// 3. validate the squares between the king and rook are empty
 	if gs.board[19] != nil || gs.board[20] != nil {
 		return false
 	}
 
 	// 4. validate that the king will not move through or into check
-	if _, isDangerous := gs.whiteValidMoves[18]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.whiteValidMoves[19]; isDangerous {
-		return false
-	}
-	if _, isDangerous := gs.whiteValidMoves[20]; isDangerous {
-		return false
-	}
+	// todo
 
 	return true
 }
