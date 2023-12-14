@@ -13,7 +13,7 @@ func main() {
 
 		var choice int
 		fmt.Printf("\n%v's turn\n", gs.CurrentPlayer())
-		fmt.Print("\n[0] Random Move, [1] Custom Move, [2] Undo Move, [3] Best Move ")
+		fmt.Print("\n[0] Random Move\n[1] Custom Move\n[2] Undo Move\n[3] Best Move\n[4] AI v AI\nChoice: ")
 		fmt.Scanln(&choice)
 
 		if choice == 0 {
@@ -39,6 +39,14 @@ func main() {
 			fmt.Print("Depth: ")
 			fmt.Scanln(&depth)
 			gs.ExecuteBestMove(depth)
+		} else if choice == 4 {
+			var depth int8
+			fmt.Print("Depth: ")
+			fmt.Scanln(&depth)
+			for {
+				gs.ExecuteBestMove(depth)
+				gs.PrettyPrint()
+			}
 		} else {
 			fmt.Println("Invalid choice")
 		}

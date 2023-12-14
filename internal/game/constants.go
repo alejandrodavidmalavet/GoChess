@@ -1,7 +1,5 @@
 package game
 
-import "math"
-
 func newBoard() [120]*Piece {
 	return [120]*Piece{
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
@@ -19,8 +17,8 @@ func newBoard() [120]*Piece {
 
 func bR() *Piece { return &Piece{Type: Rook, Color: Black, Value: 5} }
 func wR() *Piece { return &Piece{Type: Rook, Color: White, Value: 5} }
-func bK() *Piece { return &Piece{Type: King, Color: Black, Value: math.Inf(1)} }
-func wK() *Piece { return &Piece{Type: King, Color: White, Value: math.Inf(1)} }
+func bK() *Piece { return &Piece{Type: King, Color: Black, Value: 10000} }
+func wK() *Piece { return &Piece{Type: King, Color: White, Value: 10000} }
 func bQ() *Piece { return &Piece{Type: Queen, Color: Black, Value: 9} }
 func wQ() *Piece { return &Piece{Type: Queen, Color: White, Value: 9} }
 func bB() *Piece { return &Piece{Type: Bishop, Color: Black, Value: 3} }
