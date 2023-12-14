@@ -199,8 +199,8 @@ func (gs *GameState) updateValidMoves(square int8) {
 	}
 }
 
-// executeMove executes a move on the board, it does NOT validate the move
-func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
+// executeMove executes a move on the board, IF the move does not put the current player in check
+func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bool {
 
 	changeLog := &HistoryEntry{
 		Actions:         []Action{{From: origin, To: destination, hasMoved: gs.board[origin].HasMoved, capture: gs.board[destination]}},
@@ -277,6 +277,14 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 	gs.currColor *= -1
 
 	gs.update()
+
+	// check if the move put the current player in check
+	if gs.isDangerous(gs.kingSquares[gs.currColor*-1], gs.currColor) {
+		gs.Undo(true)
+		return false
+	}
+
+	return true
 }
 
 // update updates the game state to reflect the current board
@@ -322,8 +330,9 @@ func (gs *GameState) ExecuteRandomMove() bool {
 	for origin, moves := range gs.allMoves[gs.currColor] {
 		for destination := range moves {
 			for moveType := range moves[destination] {
-				gs.executeMove(origin, destination, moveType)
-				return true
+				if ok := gs.executeMove(origin, destination, moveType); ok {
+					return true
+				}
 			}
 		}
 	}
@@ -335,6 +344,5 @@ func (gs *GameState) ExecuteMove(origin, destination int8, moveType MoveType) bo
 	if _, ok := gs.allMoves[gs.currColor][origin][destination][moveType]; !ok {
 		return false
 	}
-	gs.executeMove(origin, destination, moveType)
-	return true
+	return gs.executeMove(origin, destination, moveType)
 }
