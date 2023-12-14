@@ -6,6 +6,7 @@ type Action struct {
 	hasMoved      bool
 	capture       *Piece
 	promotionPawn *Piece
+	enPassantPawn *Piece
 }
 
 type HistoryEntry struct {
@@ -16,10 +17,10 @@ type HistoryEntry struct {
 }
 
 // Undo the latest move
-func (gs *GameState) Undo(withHardUpdate bool) {
+func (gs *GameState) Undo(withHardUpdate bool) bool {
 	// if there is no history, do nothing
 	if len(gs.history) == 0 {
-		return
+		return false
 	}
 
 	// pop the last entry from the history
@@ -30,6 +31,9 @@ func (gs *GameState) Undo(withHardUpdate bool) {
 	for _, change := range entry.Actions {
 		if change.promotionPawn != nil {
 			gs.board[change.To] = change.promotionPawn
+		} else if change.enPassantPawn != nil {
+			gs.board[change.From] = change.enPassantPawn
+			continue
 		}
 		gs.board[change.From] = gs.board[change.To]
 		gs.board[change.To] = change.capture
@@ -46,4 +50,6 @@ func (gs *GameState) Undo(withHardUpdate bool) {
 	if withHardUpdate {
 		gs.update()
 	}
+
+	return true
 }

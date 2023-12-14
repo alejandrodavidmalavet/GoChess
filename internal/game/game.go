@@ -249,9 +249,8 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bo
 	// en passant
 	case EnPassantAttack:
 		square := destination + 12*int8(gs.currColor)
+		changeLog.Actions = append(changeLog.Actions, Action{From: square, To: square, hasMoved: false, enPassantPawn: gs.board[square]})
 		gs.board[square] = nil
-		changeLog.Actions = append(changeLog.Actions, Action{From: square, To: square, hasMoved: false, capture: gs.board[square]})
-
 	case EnPassantTrigger:
 		gs.enPassantSquare = destination + 12*int8(gs.currColor)
 
