@@ -16,7 +16,7 @@ func main() {
 
 		if choice == 0 {
 			if ok := gs.ExecuteRandomMove(); !ok {
-				panic("No moves available")
+				fmt.Println("Invalid move")
 			}
 		} else if choice == 1 {
 			var from, to int8

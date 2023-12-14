@@ -1,10 +1,11 @@
 package game
 
 type Action struct {
-	From     int8
-	To       int8
-	hasMoved bool
-	capture  *Piece
+	From          int8
+	To            int8
+	hasMoved      bool
+	capture       *Piece
+	promotionPawn *Piece
 }
 
 type HistoryEntry struct {
@@ -27,6 +28,9 @@ func (gs *GameState) Undo() {
 
 	// undo the actions
 	for _, change := range entry.Actions {
+		if change.promotionPawn != nil {
+			gs.board[change.To] = change.promotionPawn
+		}
 		gs.board[change.From] = gs.board[change.To]
 		gs.board[change.To] = change.capture
 		gs.board[change.From].HasMoved = change.hasMoved

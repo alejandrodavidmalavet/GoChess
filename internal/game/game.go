@@ -256,12 +256,16 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 
 	// promotions
 	case QueenPromotion:
+		changeLog.Actions[0].promotionPawn = gs.board[destination]
 		gs.board[destination] = &Piece{Type: Queen, Color: gs.currColor, Value: 9, HasMoved: true}
 	case RookPromotion:
+		changeLog.Actions[0].promotionPawn = gs.board[destination]
 		gs.board[destination] = &Piece{Type: Rook, Color: gs.currColor, Value: 5, HasMoved: true}
 	case BishopPromotion:
+		changeLog.Actions[0].promotionPawn = gs.board[destination]
 		gs.board[destination] = &Piece{Type: Bishop, Color: gs.currColor, Value: 3, HasMoved: true}
 	case KnightPromotion:
+		changeLog.Actions[0].promotionPawn = gs.board[destination]
 		gs.board[destination] = &Piece{Type: Knight, Color: gs.currColor, Value: 3, HasMoved: true}
 	}
 
