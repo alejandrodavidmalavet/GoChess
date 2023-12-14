@@ -2,12 +2,12 @@ package game
 
 func (gs *GameState) whiteQueenSide() bool {
 	// 1. Validate the king
-	if gs.board[102] == nil || gs.board[102].Type != King || gs.board[102].HasMoved {
+	if piece := gs.board[102]; piece == nil || piece.Type != King || piece.HasMoved {
 		return false
 	}
 
 	// 2. validate the rook
-	if gs.board[98] == nil || gs.board[98].Type != Rook || gs.board[98].HasMoved {
+	if piece := gs.board[98]; piece == nil || piece.Type != Rook || piece.HasMoved {
 		return false
 	}
 
@@ -17,19 +17,21 @@ func (gs *GameState) whiteQueenSide() bool {
 	}
 
 	// 4. validate that the king will not move through or into check
-	// todo
+	if gs.isDangerous(102, Black) || gs.isDangerous(101, Black) || gs.isDangerous(100, Black) {
+		return false
+	}
 
 	return true
 }
 
 func (gs *GameState) whiteKingSide() bool {
 	// 1. Validate the king
-	if gs.board[102] == nil || gs.board[102].Type != King || gs.board[102].HasMoved {
+	if piece := gs.board[102]; piece == nil || piece.Type != King || piece.HasMoved {
 		return false
 	}
 
 	// 2. validate the rook
-	if gs.board[105] == nil || gs.board[105].Type != Rook || gs.board[105].HasMoved {
+	if piece := gs.board[105]; piece == nil || piece.Type != Rook || piece.HasMoved {
 		return false
 	}
 
@@ -39,41 +41,46 @@ func (gs *GameState) whiteKingSide() bool {
 	}
 
 	// 4. validate that the king will not move through or into check
-	// todo
+	if gs.isDangerous(102, Black) || gs.isDangerous(103, Black) || gs.isDangerous(104, Black) {
+		return false
+	}
 
 	return true
 }
 
 func (gs *GameState) blackQueenSide() bool {
 	// 1. Validate the king
-	if gs.board[18] == nil || gs.board[18].Type != King || gs.board[18].HasMoved {
+	if piece := gs.board[18]; piece == nil || piece.Type != King || piece.HasMoved {
 		return false
 	}
 
 	// 2. validate the rook
-	if gs.board[14] == nil || gs.board[14].Type != Rook || gs.board[14].HasMoved {
+	if piece := gs.board[14]; piece == nil || piece.Type != Rook || piece.HasMoved {
 		return false
 	}
 
 	// 3. validate the squares between the king and rook are empty
-	if gs.board[15] != nil || gs.board[16] != nil || gs.board[17] != nil {
+	if gs.board[17] != nil || gs.board[16] != nil || gs.board[15] != nil {
 		return false
 	}
 
 	// 4. validate that the king will not move through or into check
-	// todo
+	if gs.isDangerous(18, White) || gs.isDangerous(17, White) || gs.isDangerous(16, White) {
+		return false
+	}
 
 	return true
+
 }
 
 func (gs *GameState) blackKingSide() bool {
 	// 1. Validate the king
-	if gs.board[18] == nil || gs.board[18].Type != King || gs.board[18].HasMoved {
+	if piece := gs.board[18]; piece == nil || piece.Type != King || piece.HasMoved {
 		return false
 	}
 
 	// 2. validate the rook
-	if gs.board[21] == nil || gs.board[21].Type != Rook || gs.board[21].HasMoved {
+	if piece := gs.board[21]; piece == nil || piece.Type != Rook || piece.HasMoved {
 		return false
 	}
 
@@ -83,7 +90,9 @@ func (gs *GameState) blackKingSide() bool {
 	}
 
 	// 4. validate that the king will not move through or into check
-	// todo
+	if gs.isDangerous(18, White) || gs.isDangerous(19, White) || gs.isDangerous(20, White) {
+		return false
+	}
 
 	return true
 }
