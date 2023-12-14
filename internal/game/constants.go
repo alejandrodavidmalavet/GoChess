@@ -5,30 +5,30 @@ import "math"
 func newBoard() [120]*Piece {
 	return [120]*Piece{
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
-		__(), __(), BR(), Bk(), BB(), BQ(), BK(), BB(), Bk(), BR(), __(), __(),
-		__(), __(), BP(), BP(), BP(), BP(), BP(), BP(), BP(), BP(), __(), __(),
+		__(), __(), bR(), bN(), bB(), bQ(), bK(), bB(), bN(), bR(), __(), __(),
+		__(), __(), bP(), bP(), bP(), bP(), bP(), bP(), bP(), bP(), __(), __(),
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
-		__(), __(), WP(), WP(), WP(), WP(), WP(), WP(), WP(), WP(), __(), __(),
-		__(), __(), WR(), Wk(), WB(), WQ(), WK(), WB(), Wk(), WR(), __(), __(),
+		__(), __(), wP(), wP(), wP(), wP(), wP(), wP(), wP(), wP(), __(), __(),
+		__(), __(), wR(), wN(), wB(), wQ(), wK(), wB(), wN(), wR(), __(), __(),
 		__(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(), __(),
 	}
 }
 
-func BR() *Piece { return &Piece{Type: Rook, Color: Black, Value: 5} }
-func WR() *Piece { return &Piece{Type: Rook, Color: White, Value: 5} }
-func BK() *Piece { return &Piece{Type: King, Color: Black, Value: math.Inf(1)} }
-func WK() *Piece { return &Piece{Type: King, Color: White, Value: math.Inf(1)} }
-func BQ() *Piece { return &Piece{Type: Queen, Color: Black, Value: 9} }
-func WQ() *Piece { return &Piece{Type: Queen, Color: White, Value: 9} }
-func BB() *Piece { return &Piece{Type: Bishop, Color: Black, Value: 3} }
-func WB() *Piece { return &Piece{Type: Bishop, Color: White, Value: 3} }
-func Bk() *Piece { return &Piece{Type: Knight, Color: Black, Value: 3} }
-func Wk() *Piece { return &Piece{Type: Knight, Color: White, Value: 3} }
-func BP() *Piece { return &Piece{Type: Pawn, Color: Black, Value: 1} }
-func WP() *Piece { return &Piece{Type: Pawn, Color: White, Value: 1} }
+func bR() *Piece { return &Piece{Type: Rook, Color: Black, Value: 5} }
+func wR() *Piece { return &Piece{Type: Rook, Color: White, Value: 5} }
+func bK() *Piece { return &Piece{Type: King, Color: Black, Value: math.Inf(1)} }
+func wK() *Piece { return &Piece{Type: King, Color: White, Value: math.Inf(1)} }
+func bQ() *Piece { return &Piece{Type: Queen, Color: Black, Value: 9} }
+func wQ() *Piece { return &Piece{Type: Queen, Color: White, Value: 9} }
+func bB() *Piece { return &Piece{Type: Bishop, Color: Black, Value: 3} }
+func wB() *Piece { return &Piece{Type: Bishop, Color: White, Value: 3} }
+func bN() *Piece { return &Piece{Type: Knight, Color: Black, Value: 3} }
+func wN() *Piece { return &Piece{Type: Knight, Color: White, Value: 3} }
+func bP() *Piece { return &Piece{Type: Pawn, Color: Black, Value: 1} }
+func wP() *Piece { return &Piece{Type: Pawn, Color: White, Value: 1} }
 func __() *Piece { return nil }
 
 var moveVectors = map[Type][][]int8{

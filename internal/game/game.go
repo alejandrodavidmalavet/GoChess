@@ -24,13 +24,6 @@ type GameState struct {
 	history []*HistoryEntry
 }
 
-func (gs *GameState) CurrentPlayer() string {
-	if gs.currColor == White {
-		return "White"
-	}
-	return "Black"
-}
-
 // NewGame returns a new game state with the board in the starting position
 func NewGame() *GameState {
 	board := newBoard()
@@ -101,6 +94,14 @@ func (gs *GameState) PrettyPrint() {
 			}
 		}
 	}
+}
+
+// CurrentPlayer returns the current player as a string
+func (gs *GameState) CurrentPlayer() string {
+	if gs.currColor == White {
+		return "White"
+	}
+	return "Black"
 }
 
 // updateValidMoves returns a list of valid moves for the piece at the given square, without checking for check
@@ -308,8 +309,6 @@ func (gs *GameState) update() {
 	if gs.blackQueenSide() {
 		gs.allMoves[Black][18][16] = map[MoveType]struct{}{BlackQueenSideCastle: {}}
 	}
-
-	gs.PrettyPrint()
 }
 
 // isDangerous returns true if the given square is being attacked by the given color

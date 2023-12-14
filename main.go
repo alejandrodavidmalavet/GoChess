@@ -31,7 +31,7 @@ func main() {
 				fmt.Println("Invalid move")
 			}
 		} else {
-			gs.Undo()
+			gs.Undo(true)
 		}
 
 	}
