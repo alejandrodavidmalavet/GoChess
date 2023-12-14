@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 )
 
 type Piece struct {
@@ -18,6 +19,8 @@ type GameState struct {
 
 	kingSquares map[Color]int8
 
+	score map[Color]float64
+
 	allMoves         map[Color]map[int8]map[int8]map[MoveType]struct{}
 	attackingSquares map[Color]map[int8]struct{}
 
@@ -31,6 +34,7 @@ func NewGame() *GameState {
 		board:            board,
 		currColor:        White,
 		kingSquares:      map[Color]int8{White: 102, Black: 18},
+		score:            map[Color]float64{White: 0, Black: 0},
 		allMoves:         map[Color]map[int8]map[int8]map[MoveType]struct{}{White: {}, Black: {}},
 		attackingSquares: map[Color]map[int8]struct{}{White: {}, Black: {}},
 	}
@@ -42,7 +46,25 @@ func NewGame() *GameState {
 
 // PrettyPrint prints the board in a human readable format to the console
 func (gs *GameState) PrettyPrint() {
+	var to, from int8
+	if len(gs.history) > 0 {
+		to = gs.history[len(gs.history)-1].Actions[0].To
+		from = gs.history[len(gs.history)-1].Actions[0].From
+	}
+
+	color := ""
+	reset := "\033[0m"
+
 	for i, piece := range gs.board {
+		fmt.Print(reset)
+		if i == int(to) || i == int(from) {
+			color = "\033[32m"
+		} else {
+			color = "\033[34m"
+		}
+
+		fmt.Print(color)
+
 		if i%12 == 0 {
 			fmt.Println()
 		}
@@ -94,6 +116,10 @@ func (gs *GameState) PrettyPrint() {
 			}
 		}
 	}
+	fmt.Print(reset)
+	fmt.Printf("\nWhite Score: %f\n", gs.score[White])
+	fmt.Printf("Black Score: %f\n", gs.score[Black])
+
 }
 
 // CurrentPlayer returns the current player as a string
@@ -199,17 +225,22 @@ func (gs *GameState) updateValidMoves(square int8) {
 	}
 }
 
-// executeMove executes a move on the board, IF the move does not put the current player in check
-func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bool {
+// executeMove executes a move on the board w/o doing any validation
+func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 
 	changeLog := &HistoryEntry{
 		Actions:         []Action{{From: origin, To: destination, hasMoved: gs.board[origin].HasMoved, capture: gs.board[destination]}},
 		enPassantSquare: gs.enPassantSquare,
 		whiteKingSquare: gs.kingSquares[White],
 		blackKingSquare: gs.kingSquares[Black],
+		blackScore:      gs.score[Black],
+		whiteScore:      gs.score[White],
 	}
 
 	// handle a typical move
+	if capture := gs.board[destination]; capture != nil {
+		gs.score[capture.Color] -= capture.Value
+	}
 	gs.board[destination] = gs.board[origin]
 	gs.board[origin] = nil
 	gs.board[destination].HasMoved = true
@@ -249,7 +280,9 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bo
 	// en passant
 	case EnPassantAttack:
 		square := destination + 12*int8(gs.currColor)
-		changeLog.Actions = append(changeLog.Actions, Action{From: square, To: square, hasMoved: false, enPassantPawn: gs.board[square]})
+		enPassantPawn := gs.board[square]
+		gs.score[enPassantPawn.Color] -= enPassantPawn.Value
+		changeLog.Actions = append(changeLog.Actions, Action{From: square, To: square, hasMoved: false, enPassantPawn: enPassantPawn})
 		gs.board[square] = nil
 	case EnPassantTrigger:
 		gs.enPassantSquare = destination + 12*int8(gs.currColor)
@@ -257,15 +290,19 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bo
 	// promotions
 	case QueenPromotion:
 		changeLog.Actions[0].promotionPawn = gs.board[destination]
+		gs.score[gs.currColor] += 8
 		gs.board[destination] = &Piece{Type: Queen, Color: gs.currColor, Value: 9, HasMoved: true}
 	case RookPromotion:
 		changeLog.Actions[0].promotionPawn = gs.board[destination]
+		gs.score[gs.currColor] += 4
 		gs.board[destination] = &Piece{Type: Rook, Color: gs.currColor, Value: 5, HasMoved: true}
 	case BishopPromotion:
 		changeLog.Actions[0].promotionPawn = gs.board[destination]
+		gs.score[gs.currColor] += 2
 		gs.board[destination] = &Piece{Type: Bishop, Color: gs.currColor, Value: 3, HasMoved: true}
 	case KnightPromotion:
 		changeLog.Actions[0].promotionPawn = gs.board[destination]
+		gs.score[gs.currColor] += 2
 		gs.board[destination] = &Piece{Type: Knight, Color: gs.currColor, Value: 3, HasMoved: true}
 	}
 
@@ -276,14 +313,6 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) bo
 	gs.currColor *= -1
 
 	gs.update()
-
-	// check if the move put the current player in check
-	if gs.isDangerous(gs.kingSquares[gs.currColor*-1], gs.currColor) {
-		gs.Undo(true)
-		return false
-	}
-
-	return true
 }
 
 // update updates the game state to reflect the current board
@@ -329,9 +358,8 @@ func (gs *GameState) ExecuteRandomMove() bool {
 	for origin, moves := range gs.allMoves[gs.currColor] {
 		for destination := range moves {
 			for moveType := range moves[destination] {
-				if ok := gs.executeMove(origin, destination, moveType); ok {
-					return true
-				}
+				gs.executeMove(origin, destination, moveType)
+				return true
 			}
 		}
 	}
@@ -343,5 +371,70 @@ func (gs *GameState) ExecuteMove(origin, destination int8, moveType MoveType) bo
 	if _, ok := gs.allMoves[gs.currColor][origin][destination][moveType]; !ok {
 		return false
 	}
-	return gs.executeMove(origin, destination, moveType)
+	gs.executeMove(origin, destination, moveType)
+	return true
+}
+
+func (gs *GameState) ExecuteBestMove(depth int8) {
+	bestScore := math.Inf(-1)
+	var bestOrigin, bestDestination int8
+	var bestMoveType MoveType
+	for origin, moves := range gs.allMoves[gs.currColor] {
+		for destination := range moves {
+			for moveType := range moves[destination] {
+				gs.executeMove(origin, destination, moveType)
+				score := -gs.alphaBeta(depth, math.Inf(-1), math.Inf(1)) * float64(gs.currColor)
+				gs.Undo(true)
+				if score > bestScore {
+					bestScore = score
+					bestOrigin = origin
+					bestDestination = destination
+					bestMoveType = moveType
+				}
+			}
+		}
+	}
+	gs.executeMove(bestOrigin, bestDestination, bestMoveType)
+}
+
+func (gs *GameState) alphaBeta(depth int8, a, b float64) float64 {
+	if depth == 0 {
+		return gs.score[White] - gs.score[Black]
+	}
+
+	if gs.currColor == White {
+		value := math.Inf(-1)
+		for origin, moves := range gs.allMoves[gs.currColor] {
+			for destination := range moves {
+				for moveType := range moves[destination] {
+					gs.executeMove(origin, destination, moveType)
+					value = math.Max(value, gs.alphaBeta(depth-1, a, b))
+					// gs.PrettyPrint()
+					gs.Undo(true)
+					if value > b {
+						return value
+					}
+					a = math.Max(a, value)
+				}
+			}
+		}
+		return value
+	} else {
+		value := math.Inf(1)
+		for origin, moves := range gs.allMoves[gs.currColor] {
+			for destination := range moves {
+				for moveType := range moves[destination] {
+					gs.executeMove(origin, destination, moveType)
+					value = math.Min(value, gs.alphaBeta(depth-1, a, b))
+					// gs.PrettyPrint()
+					gs.Undo(true)
+					if value < a {
+						return value
+					}
+					b = math.Min(b, value)
+				}
+			}
+		}
+		return value
+	}
 }

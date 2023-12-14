@@ -14,6 +14,8 @@ type HistoryEntry struct {
 	enPassantSquare int8
 	whiteKingSquare int8
 	blackKingSquare int8
+	blackScore      float64
+	whiteScore      float64
 }
 
 // Undo the latest move
@@ -44,6 +46,8 @@ func (gs *GameState) Undo(withHardUpdate bool) bool {
 	gs.enPassantSquare = entry.enPassantSquare
 	gs.kingSquares[White] = entry.whiteKingSquare
 	gs.kingSquares[Black] = entry.blackKingSquare
+	gs.score[White] = entry.whiteScore
+	gs.score[Black] = entry.blackScore
 
 	gs.currColor *= -1
 
