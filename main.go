@@ -9,6 +9,8 @@ import (
 func main() {
 	gs := game.NewGame()
 	for {
+		gs.PrettyPrint()
+
 		var choice int
 		fmt.Printf("\n%v's turn\n", gs.CurrentPlayer())
 		fmt.Print("\n[0] Random Move, [1] Custom Move, [2] Undo Move: ")
@@ -30,10 +32,9 @@ func main() {
 			if ok := gs.ExecuteMove(from, to, game.MoveType(choice)); !ok {
 				fmt.Println("Invalid move")
 			}
-		} else {
+		} else if choice == 2 {
 			gs.Undo(true)
 		}
-
 	}
 
 }
