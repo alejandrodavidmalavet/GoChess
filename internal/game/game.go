@@ -187,7 +187,7 @@ func (gs *GameState) updateValidMoves(square int8) {
 
 						// d. The pawn moves forward two squares
 					} else if offset == 24 && !currPiece.HasMoved {
-						gs.allMoves[currPiece.Color][square][target] = map[MoveType]struct{}{EnPassantTrigger: {}}
+						gs.allMoves[currPiece.Color][square][target] = map[MoveType]struct{}{EnPassantPrimer: {}}
 
 						// e. The pawn captures diagonally
 					} else if gs.board[target] != nil {
@@ -284,7 +284,7 @@ func (gs *GameState) executeMove(origin, destination int8, moveType MoveType) {
 		gs.score[enPassantPawn.Color] -= enPassantPawn.Value
 		changeLog.Actions = append(changeLog.Actions, Action{From: square, To: square, hasMoved: false, enPassantPawn: enPassantPawn})
 		gs.board[square] = nil
-	case EnPassantTrigger:
+	case EnPassantPrimer:
 		gs.enPassantSquare = destination + 12*int8(gs.currColor)
 
 	// promotions

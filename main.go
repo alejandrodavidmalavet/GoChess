@@ -46,7 +46,7 @@ func main() {
 			var mt game.MoveType
 			fmt.Print("[", game.Neutral, "] Neutral\n",
 				"[", game.EnPassantAttack, "] EnPassantAttack\n",
-				"[", game.EnPassantTrigger, "] EnPassantTrigger\n",
+				"[", game.EnPassantPrimer, "] EnPassantPrimer\n",
 				"[", game.WhiteKingSideCastle, "] WhiteKingSideCastle\n",
 				"[", game.WhiteQueenSideCastle, "] WhiteQueenSideCastle\n",
 				"[", game.BlackKingSideCastle, "] BlackKingSideCastle\n",

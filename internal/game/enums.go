@@ -14,7 +14,7 @@ const (
 
 	// en passant moves
 	EnPassantAttack
-	EnPassantTrigger
+	EnPassantPrimer
 
 	// castling moves
 	WhiteKingSideCastle
