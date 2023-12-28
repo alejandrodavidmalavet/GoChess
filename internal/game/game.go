@@ -384,7 +384,7 @@ func (gs *GameState) ExecuteBestMove(depth int8) {
 			for moveType := range moves[destination] {
 				gs.executeMove(origin, destination, moveType)
 				score := -gs.alphaBeta(depth, math.Inf(-1), math.Inf(1)) * float64(gs.currColor)
-				gs.Undo(true)
+				gs.Undo()
 				if score > bestScore {
 					bestScore = score
 					bestOrigin = origin
@@ -409,8 +409,7 @@ func (gs *GameState) alphaBeta(depth int8, a, b float64) float64 {
 				for moveType := range moves[destination] {
 					gs.executeMove(origin, destination, moveType)
 					value = math.Max(value, gs.alphaBeta(depth-1, a, b))
-					// gs.PrettyPrint()
-					gs.Undo(true)
+					gs.Undo()
 					if value > b {
 						return value
 					}
@@ -426,8 +425,7 @@ func (gs *GameState) alphaBeta(depth int8, a, b float64) float64 {
 				for moveType := range moves[destination] {
 					gs.executeMove(origin, destination, moveType)
 					value = math.Min(value, gs.alphaBeta(depth-1, a, b))
-					// gs.PrettyPrint()
-					gs.Undo(true)
+					gs.Undo()
 					if value < a {
 						return value
 					}

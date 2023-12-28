@@ -19,7 +19,7 @@ type HistoryEntry struct {
 }
 
 // Undo the latest move
-func (gs *GameState) Undo(withHardUpdate bool) bool {
+func (gs *GameState) Undo() bool {
 	// if there is no history, do nothing
 	if len(gs.history) == 0 {
 		return false
@@ -51,9 +51,7 @@ func (gs *GameState) Undo(withHardUpdate bool) bool {
 
 	gs.currColor *= -1
 
-	if withHardUpdate {
-		gs.update()
-	}
+	gs.update()
 
 	return true
 }
