@@ -6,40 +6,69 @@ import (
 	"github.com/alejandrodavidmalavet/GoChess/internal/game"
 )
 
+type Choice int
+
+const (
+	RandomMove Choice = iota
+	CustomMove
+	UndoMove
+	BestMove
+	AIVsAI
+)
+
 func main() {
 	gs := game.NewGame()
 	for {
 		gs.PrettyPrint()
 
-		var choice int
+		var c Choice
 		fmt.Printf("\n%v's turn\n", gs.CurrentPlayer())
-		fmt.Print("\n[0] Random Move\n[1] Custom Move\n[2] Undo Move\n[3] Best Move\n[4] AI v AI\nChoice: ")
-		fmt.Scanln(&choice)
+		fmt.Print("\n[", RandomMove, "] Random Move\n",
+			"[", CustomMove, "] Custom Move\n",
+			"[", UndoMove, "] Undo Move\n",
+			"[", BestMove, "] Best Move\n",
+			"[", AIVsAI, "] AI v AI\n",
+			"Choice: ")
+		fmt.Scanln(&c)
 
-		if choice == 0 {
+		switch c {
+		case RandomMove:
 			if ok := gs.ExecuteRandomMove(); !ok {
 				fmt.Println("Invalid move")
 			}
-		} else if choice == 1 {
+		case CustomMove:
 			var from, to int8
 			fmt.Print("From: ")
 			fmt.Scanln(&from)
 			fmt.Print("To: ")
 			fmt.Scanln(&to)
-			fmt.Print("[0] Neutral\n[1] EnPassantAttack\n[2] EnPassantTrigger\n[3] WhiteKingSideCastle\n[4] WhiteQueenSideCastle\n[5] BlackKingSideCastle\n[6] BlackQueenSideCastle\n[7] QueenPromotion\n[8] RookPromotion\n[9] BishopPromotion\n[10] KnightPromotion\nMoveType: ")
-			fmt.Scanln(&choice)
 
-			if ok := gs.ExecuteMove(from, to, game.MoveType(choice)); !ok {
+			var mt game.MoveType
+			fmt.Print("[", game.Neutral, "] Neutral\n",
+				"[", game.EnPassantAttack, "] EnPassantAttack\n",
+				"[", game.EnPassantTrigger, "] EnPassantTrigger\n",
+				"[", game.WhiteKingSideCastle, "] WhiteKingSideCastle\n",
+				"[", game.WhiteQueenSideCastle, "] WhiteQueenSideCastle\n",
+				"[", game.BlackKingSideCastle, "] BlackKingSideCastle\n",
+				"[", game.BlackQueenSideCastle, "] BlackQueenSideCastle\n",
+				"[", game.QueenPromotion, "] QueenPromotion\n",
+				"[", game.RookPromotion, "] RookPromotion\n",
+				"[", game.BishopPromotion, "] BishopPromotion\n",
+				"[", game.KnightPromotion, "] KnightPromotion\n",
+				"MoveType: ")
+			fmt.Scanln(&mt)
+
+			if ok := gs.ExecuteMove(from, to, mt); !ok {
 				fmt.Println("Invalid move")
 			}
-		} else if choice == 2 {
+		case UndoMove:
 			gs.Undo()
-		} else if choice == 3 {
+		case BestMove:
 			var depth int8
 			fmt.Print("Depth: ")
 			fmt.Scanln(&depth)
 			gs.ExecuteBestMove(depth)
-		} else if choice == 4 {
+		case AIVsAI:
 			var depth int8
 			fmt.Print("Depth: ")
 			fmt.Scanln(&depth)
@@ -47,7 +76,7 @@ func main() {
 				gs.ExecuteBestMove(depth)
 				gs.PrettyPrint()
 			}
-		} else {
+		default:
 			fmt.Println("Invalid choice")
 		}
 	}
